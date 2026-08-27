@@ -13,12 +13,20 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: lts/*
+        cache: 'npm'
     - name: Install dependencies
-      run: npm ci
+      run: make install
+    - name: Build frontend
+      run: make build
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
+    - name: Run dev server in background
+      run: npm run dev &
     - name: Run Playwright tests
-      run: npx playwright test
+      run: make test # Запускаем тесты через ваш Makefile
+      env:
+        APP_URL: http://localhost:5173
+        
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
