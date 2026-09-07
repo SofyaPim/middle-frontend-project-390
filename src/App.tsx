@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import type { City, Flight, Passenger, BookingResponse } from "./types";
 
 import { PassengerForm } from "./components/PassengerForm";
-import { BookingSuccess } from './components/BookingSuccess';
-
+import { BookingSuccess } from "./components/BookingSuccess";
 
 function App() {
   const currentPath = window.location.pathname;
@@ -42,6 +41,12 @@ function App() {
     setFlightNotFound(false);
     setBookingSuccessData(null);
   }
+  // Стейт для хранения ошибок валидации формы
+  const [validationErrors, setValidationErrors] = useState<{
+    email?: string;
+    phone?: string;
+    passengers?: Record<number, Partial<Record<keyof Passenger, string>>>;
+  }>({});
 
   // Функция для запроса рейсов у API
   const fetchFlights = (from: string, to: string, departureDate: string, passCount: number) => {
@@ -113,7 +118,7 @@ function App() {
           setFlightNotFound(true);
           throw new Error("Рейс не найден");
         }
-        if (!res.ok) throw new Error("Не удалось загрузить данные рейса");
+        if (!res.ok){ throw new Error("Не удалось загрузить данные рейса");}
         return res.json();
       })
       .then((data: Flight) => {
@@ -136,6 +141,52 @@ function App() {
   // 2. Функция отправки формы бронирования на сервер
   const handleBookingSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
+
+    setValidationErrors({});
+    const errors: typeof validationErrors = {};
+    const pErrorsArr: NonNullable<(typeof validationErrors)["passengers"]> = {};
+
+    let hasErrors = false;
+
+    // Валидация контактов
+    if (!contactEmail.trim()) {
+      errors.email = "Email обязателен";
+      hasErrors = true;
+    } else if (!/\S+@\S+\.\S+/.test(contactEmail)) {
+      errors.email = "Некорректный формат email";
+      hasErrors = true;
+    }
+
+    if (!contactPhone.trim()) {
+      errors.phone = "Телефон обязателен";
+      hasErrors = true;
+    }
+
+    // Валидация списка пассажиров
+    passengersList.forEach((passenger, index) => {
+      const pError: Partial<Record<keyof Passenger, string>> = {};
+
+      if (!passenger.firstName?.trim()) pError.firstName = "Имя обязательно";
+      if (!passenger.lastName?.trim()) pError.lastName = "Фамилия обязательна";
+      if (!passenger.dateOfBirth?.trim()) pError.dateOfBirth = "Дата рождения обязательна";
+      if (!passenger.documentNumber?.trim()) pError.documentNumber = "Документ обязателен";
+
+      if (Object.keys(pError).length > 0) {
+        pErrorsArr[index] = pError;
+        hasErrors = true;
+      }
+    });
+
+    if (Object.keys(pErrorsArr).length > 0) {
+      errors.passengers = pErrorsArr;
+    }
+
+    // Блокировка отправки формы
+    if (hasErrors) {
+      setValidationErrors(errors);
+      return;
+    }
+
     setError(null);
 
     if (passengersList.length === 0) {
@@ -168,8 +219,6 @@ function App() {
 
       const data = await response.json();
       setBookingSuccessData(data);
-      
-
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Произошла неизвестная ошибка";
       console.error(errorMessage);
@@ -187,68 +236,72 @@ function App() {
     return <div data-testid="flight-not-found">Рейс не найден</div>;
   }
   if (isBookingPage) {
- 
     return (
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif' }}>
-      {/* Глобальная шапка — ВСЕГДА НА МЕСТЕ */}
-      <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '5px' }}>Бронирование авиабилетов</h1>
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '25px', fontSize: '14px' }}>
-        <a href="/" style={{ textDecoration: 'none', color: '#007bff' }}>Поиск рейсов</a>
-        <a href="/my-bookings" style={{ textDecoration: 'none', color: '#007bff' }}>Мои брони</a>
-      </div>
+      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
+        {/* Глобальная шапка — ВСЕГДА НА МЕСТЕ */}
+        <h1 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "5px" }}>Бронирование авиабилетов</h1>
+        <div style={{ display: "flex", gap: "15px", marginBottom: "25px", fontSize: "14px" }}>
+          <a href="/" style={{ textDecoration: "none", color: "#007bff" }}>
+            Поиск рейсов
+          </a>
+          <a href="/my-bookings" style={{ textDecoration: "none", color: "#007bff" }}>
+            Мои брони
+          </a>
+        </div>
 
-      {/* Переключатель контента */}
-      {bookingSuccessData ? (
-        <BookingSuccess bookingData={bookingSuccessData} flight={selectedFlight} />
-      ) : (
-        <form onSubmit={handleBookingSubmit} data-testid="booking-form">
-          {/* Перенесли подзаголовок формы сюда, чтобы он исчезал при успехе */}
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Оформление бронирования</h2>
-         
-        {/* карточка рейса */}
-        {selectedFlight ? (
-          <div data-testid="booking-flight" style={{ padding: "15px",  margin: " 0 auto" }}>
-            <strong>{selectedFlight?.origin.name} → {selectedFlight?.destination.name}, {selectedFlight?.flightNumber}</strong>
-          </div>
+        {/* Переключатель контента */}
+        {bookingSuccessData ? (
+          <BookingSuccess bookingData={bookingSuccessData} flight={selectedFlight} />
         ) : (
-          <div> Загрузка данных...</div>
+          <form onSubmit={handleBookingSubmit} data-testid="booking-form">
+            {/* Перенесли подзаголовок формы сюда, чтобы он исчезал при успехе */}
+            <h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "20px" }}>Оформление бронирования</h2>
+
+            {/* карточка рейса */}
+            {selectedFlight ? (
+              <div data-testid="booking-flight" style={{ padding: "15px", margin: " 0 auto" }}>
+                <strong>
+                  {selectedFlight?.origin.name} → {selectedFlight?.destination.name}, {selectedFlight?.flightNumber}
+                </strong>
+              </div>
+            ) : (
+              <div> Загрузка данных...</div>
+            )}
+            {/* временное использование функций для формы, чтобы не ругался TypeScript*/}
+
+            {/* Контактные данные как на образце */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "25px" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
+                Email
+                <input type="email"  placeholder="ivan@example.com" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} style={{ padding: "10px", borderRadius: "6px", border: `1px solid ${validationErrors.email ? "red" : "#ccc"}`, fontSize: "15px" }} />
+                {validationErrors.email && <span style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{validationErrors.email}</span>}
+              </label>
+
+              <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
+                Телефон
+                <input type="tel"  placeholder="+7 999 000-11-22" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} style={{ padding: "10px", borderRadius: "6px", border: `1px solid ${validationErrors.phone ? "red" : "#ccc"}`, fontSize: "15px" }} />
+                {validationErrors.phone && <span style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{validationErrors.phone}</span>}
+              </label>
+            </div>
+
+            {/* Визуальный разделитель «Пассажиры» */}
+            <div style={{ display: "flex", alignItems: "center", margin: "20px 0", color: "#888", fontSize: "12px" }}>
+              <span style={{ paddingRight: "10px", whiteSpace: "nowrap" }}>Пассажиры</span>
+              <hr style={{ width: "100%", border: "0", borderTop: "1px solid #eee" }} />
+            </div>
+
+            {passengersList.map((passenger, index) => (
+              <PassengerForm key={index} passenger={passenger} index={index} onChange={handlePassengerChange} errors={validationErrors.passengers?.[index]} />
+            ))}
+            <button type="button" onClick={handleAddPassenger} style={{ padding: "8px 16px", backgroundColor: "#0d6efd", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+              Добавить пассажира
+            </button>
+            <button type="submit" style={{ padding: "8px 16px", backgroundColor: "#0d6efd", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+              Забронировать
+            </button>
+          </form>
         )}
-        {/* временное использование функций для формы, чтобы не ругался TypeScript*/}
-        
-         
-          {/* Контактные данные как на образце */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "25px" }}>
-            <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
-              Email
-              <input type="email" required placeholder="ivan@example.com" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} style={{ padding: "10px", borderRadius: "6px", border: "1px solid #ccc", fontSize: "15px" }} />
-            </label>
-
-            <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
-              Телефон
-              <input type="tel" required placeholder="+7 999 000-11-22" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} style={{ padding: "10px", borderRadius: "6px", border: "1px solid #ccc", fontSize: "15px" }} />
-            </label>
-          </div>
-
-          {/* Визуальный разделитель «Пассажиры» */}
-          <div style={{ display: "flex", alignItems: "center", margin: "20px 0", color: "#888", fontSize: "12px" }}>
-            <span style={{ paddingRight: "10px", whiteSpace: "nowrap" }}>Пассажиры</span>
-            <hr style={{ width: "100%", border: "0", borderTop: "1px solid #eee" }} />
-          </div>
-
-          {passengersList.map((passenger, index) => (
-            <PassengerForm key={index} passenger={passenger} index={index} onChange={handlePassengerChange} />
-          ))}
-          <button type="button" onClick={handleAddPassenger} style={{ padding: "8px 16px", backgroundColor: "#0d6efd", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-            Добавить пассажира
-          </button>
-          <button type="submit" style={{ padding: "8px 16px", backgroundColor: "#0d6efd", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-            Забронировать
-          </button>
-        </form>
-        
-      )}
-    </div>
-      
+      </div>
     );
   }
   return (
@@ -340,14 +393,9 @@ function App() {
               <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
                 <div style={{ fontSize: "20px", fontWeight: "bold", color: "#000" }}>{flight.price.amount.toLocaleString("ru-RU")} ₽</div>
 
-                <a 
-                  href={`/booking/${flight.id}`} 
-                  data-testid="book-flight" 
-                  style={{ display: "inline-block", padding: "10px 20px", background: "#e3f2fd", color: "#0d6efd", textDecoration: "none", borderRadius: "6px", fontWeight: "500" }}
-                >
+                <a href={`/booking/${flight.id}`} data-testid="book-flight" style={{ display: "inline-block", padding: "10px 20px", background: "#e3f2fd", color: "#0d6efd", textDecoration: "none", borderRadius: "6px", fontWeight: "500" }}>
                   Забронировать
                 </a>
-
               </div>
             </div>
           ))}

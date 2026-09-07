@@ -33,6 +33,7 @@ export interface Passenger{
    dateOfBirth: string;   
   documentNumber: string; 
   
+  
 }
 
 export interface BookingResponse {
