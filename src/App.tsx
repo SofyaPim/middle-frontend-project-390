@@ -214,7 +214,7 @@ function App() {
           <div> Загрузка данных...</div>
         )}
         {/* временное использование функций для формы, чтобы не ругался TypeScript*/}
-        <form onSubmit={handleBookingSubmit}>
+        
          
           {/* Контактные данные как на образце */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "25px" }}>
@@ -245,7 +245,7 @@ function App() {
             Забронировать
           </button>
         </form>
-        </form>
+        
       )}
     </div>
       
@@ -340,9 +340,14 @@ function App() {
               <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
                 <div style={{ fontSize: "20px", fontWeight: "bold", color: "#000" }}>{flight.price.amount.toLocaleString("ru-RU")} ₽</div>
 
-                <a href={`/booking/${flight.id}`} data-testid="book-flight" style={{ display: "inline-block", padding: "10px 20px", background: "#e3f2fd", color: "#0d6efd", textDecoration: "none", borderRadius: "6px", fontWeight: "500" }}>
+                <a 
+                  href={`/booking/${flight.id}`} 
+                  data-testid="book-flight" 
+                  style={{ display: "inline-block", padding: "10px 20px", background: "#e3f2fd", color: "#0d6efd", textDecoration: "none", borderRadius: "6px", fontWeight: "500" }}
+                >
                   Забронировать
                 </a>
+
               </div>
             </div>
           ))}
