@@ -26,3 +26,20 @@ export interface Flight {
   price: Money;        
   seatsAvailable: number;
 }
+
+export interface Passenger{
+  firstName: string,
+  lastName: string,
+   dateOfBirth: string;   
+  documentNumber: string; 
+  
+}
+
+export interface BookingResponse {
+  code: string;
+  passengers: Passenger[];
+  totalPrice: {
+    amount: number;
+    currency: string;
+  };
+}

@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
-import type { City, Flight } from "./types";
+import type { City, Flight, Passenger, BookingResponse } from "./types";
+
+import { PassengerForm } from "./components/PassengerForm";
+import { BookingSuccess } from './components/BookingSuccess';
+
 
 function App() {
+  const currentPath = window.location.pathname;
+  const isBookingPage = currentPath.startsWith("/booking/");
+  const bookingFlightId = isBookingPage ? currentPath.replace("/booking/", "") : null;
+
   // Данные из API
   const [cities, setCities] = useState<City[]>([]);
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -14,6 +22,26 @@ function App() {
   const [passengers, setPassengers] = useState<number>(1);
 
   const [loading, setLoading] = useState(true);
+
+  // Переменные для экрана оформления бронирования (Шаг 4)
+  const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
+  const [flightNotFound, setFlightNotFound] = useState<boolean>(false);
+  const [bookingSuccessData, setBookingSuccessData] = useState<BookingResponse | null>(null);
+
+  // Контакты формы бронирования
+  const [contactEmail, setContactEmail] = useState<string>("");
+  const [contactPhone, setContactPhone] = useState<string>("");
+
+  // Список пассажиров (по умолчанию стартуем с одного пустого пассажира)
+  const [passengersList, setPassengersList] = useState<Passenger[]>([{ firstName: "", lastName: "", dateOfBirth: "", documentNumber: "" }]);
+  // Автоматический сброс состояний при смене страницы (без использования useEffect, как просит линтер)
+  const [lastPath, setLastPath] = useState(currentPath);
+  if (currentPath !== lastPath) {
+    setLastPath(currentPath);
+    setError(null);
+    setFlightNotFound(false);
+    setBookingSuccessData(null);
+  }
 
   // Функция для запроса рейсов у API
   const fetchFlights = (from: string, to: string, departureDate: string, passCount: number) => {
@@ -72,12 +100,157 @@ function App() {
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Загрузка данных конкретного рейса при прямом переходе на страницу бронирования
+  useEffect(() => {
+    // Если мы не на странице бронирования или ID нет, ничего не делаем
+    if (!isBookingPage || !bookingFlightId) {
+      return;
+    }
+
+    fetch(`/api/flights/${bookingFlightId}`)
+      .then((res) => {
+        if (res.status === 404) {
+          setFlightNotFound(true);
+          throw new Error("Рейс не найден");
+        }
+        if (!res.ok) throw new Error("Не удалось загрузить данные рейса");
+        return res.json();
+      })
+      .then((data: Flight) => {
+        setSelectedFlight(data); // Сохраняем информацию о выбранном рейсе
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err.message);
+        setError(err.message);
+        setLoading(false);
+      });
+  }, [isBookingPage, bookingFlightId]);
+  // 1. Функция для добавления нового пассажира в форму
+  const handleAddPassenger = () => {
+    setPassengersList([...passengersList, { firstName: "", lastName: "", dateOfBirth: "", documentNumber: "" }]);
+  };
+  const handlePassengerChange = (index: number, field: Partial<Passenger>) => {
+    setPassengersList((prevList) => prevList.map((passenger, i) => (i === index ? { ...passenger, ...field } : passenger)));
+  };
+  // 2. Функция отправки формы бронирования на сервер
+  const handleBookingSubmit = async (e: React.SubmitEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (passengersList.length === 0) {
+      setError("Добавьте хотя бы одного пассажира");
+      return;
+    }
+
+    const requestBody = {
+      flightId: bookingFlightId,
+      contact: {
+        email: contactEmail,
+        phone: contactPhone,
+      },
+      passengers: passengersList,
+    };
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Не удалось оформить бронирование");
+      }
+
+      const data = await response.json();
+      setBookingSuccessData(data);
+      
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Произошла неизвестная ошибка";
+      console.error(errorMessage);
+      setError(errorMessage);
+    }
+  };
 
   const handleSearch = (e: React.SubmitEvent) => {
     e.preventDefault();
     fetchFlights(origin, destination, date, passengers);
   };
+  console.log(bookingSuccessData, setContactEmail, setContactPhone);
 
+  if (flightNotFound) {
+    return <div data-testid="flight-not-found">Рейс не найден</div>;
+  }
+  if (isBookingPage) {
+ 
+    return (
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif' }}>
+      {/* Глобальная шапка — ВСЕГДА НА МЕСТЕ */}
+      <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '5px' }}>Бронирование авиабилетов</h1>
+      <div style={{ display: 'flex', gap: '15px', marginBottom: '25px', fontSize: '14px' }}>
+        <a href="/" style={{ textDecoration: 'none', color: '#007bff' }}>Поиск рейсов</a>
+        <a href="/my-bookings" style={{ textDecoration: 'none', color: '#007bff' }}>Мои брони</a>
+      </div>
+
+      {/* Переключатель контента */}
+      {bookingSuccessData ? (
+        <BookingSuccess bookingData={bookingSuccessData} flight={selectedFlight} />
+      ) : (
+        <form onSubmit={handleBookingSubmit} data-testid="booking-form">
+          {/* Перенесли подзаголовок формы сюда, чтобы он исчезал при успехе */}
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Оформление бронирования</h2>
+         
+        {/* карточка рейса */}
+        {selectedFlight ? (
+          <div data-testid="booking-flight" style={{ padding: "15px",  margin: " 0 auto" }}>
+            <strong>{selectedFlight?.origin.name} → {selectedFlight?.destination.name}, {selectedFlight?.flightNumber}</strong>
+          </div>
+        ) : (
+          <div> Загрузка данных...</div>
+        )}
+        {/* временное использование функций для формы, чтобы не ругался TypeScript*/}
+        <form onSubmit={handleBookingSubmit}>
+         
+          {/* Контактные данные как на образце */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "25px" }}>
+            <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
+              Email
+              <input type="email" required placeholder="ivan@example.com" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} style={{ padding: "10px", borderRadius: "6px", border: "1px solid #ccc", fontSize: "15px" }} />
+            </label>
+
+            <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
+              Телефон
+              <input type="tel" required placeholder="+7 999 000-11-22" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} style={{ padding: "10px", borderRadius: "6px", border: "1px solid #ccc", fontSize: "15px" }} />
+            </label>
+          </div>
+
+          {/* Визуальный разделитель «Пассажиры» */}
+          <div style={{ display: "flex", alignItems: "center", margin: "20px 0", color: "#888", fontSize: "12px" }}>
+            <span style={{ paddingRight: "10px", whiteSpace: "nowrap" }}>Пассажиры</span>
+            <hr style={{ width: "100%", border: "0", borderTop: "1px solid #eee" }} />
+          </div>
+
+          {passengersList.map((passenger, index) => (
+            <PassengerForm key={index} passenger={passenger} index={index} onChange={handlePassengerChange} />
+          ))}
+          <button type="button" onClick={handleAddPassenger} style={{ padding: "8px 16px", backgroundColor: "#0d6efd", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+            Добавить пассажира
+          </button>
+          <button type="submit" style={{ padding: "8px 16px", backgroundColor: "#0d6efd", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+            Забронировать
+          </button>
+        </form>
+        </form>
+      )}
+    </div>
+      
+    );
+  }
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
       <h1 data-testid="page-title" style={{ fontSize: "28px", marginBottom: "5px" }}>
@@ -132,7 +305,7 @@ function App() {
       {loading && <p>Загрузка рейсов...</p>}
 
       {error && (
-        <div data-testid="flights-error" style={{ color: "red", padding: "10px", border: "1px solid red", marginBottom: "20px", borderRadius: "4px" }}>
+        <div data-testid="booking-error" style={{ color: "red", padding: "10px", border: "1px solid red", marginBottom: "20px", borderRadius: "4px" }}>
           Произошла ошибка запроса: {error}
         </div>
       )}
