@@ -44,7 +44,7 @@ export const PassengerForm: React.FC<PassengerFormProps> = ({ passenger, index, 
           <input
             type="date"
             
-            data-testid={`passenger-${index}-dob`}
+            data-testid={`passenger-${index}-dateOfBirth`}
             value={passenger.dateOfBirth}
             onChange={(e) => onChange(index, { dateOfBirth: e.target.value })}
             style={{padding:'6px', borderRadius: '4px', border: '1px solid #ccc',  borderColor: errors?.dateOfBirth ? 'red' : '#ccc'}}
@@ -57,7 +57,7 @@ export const PassengerForm: React.FC<PassengerFormProps> = ({ passenger, index, 
           <input
             type="text"
             
-            data-testid={`passenger-${index}-document`}
+            data-testid={`passenger-${index}-documentNumber`}
             value={passenger.documentNumber}
              onChange={(e) => onChange(index, { documentNumber: e.target.value })}
             style={{padding:'6px', borderRadius: '4px', border: '1px solid #ccc',  borderColor: errors?.documentNumber ? 'red' : '#ccc'}}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { City, Flight, Passenger, BookingResponse } from "./types";
 
+import { Header } from "./components/Header";
 import { PassengerForm } from "./components/PassengerForm";
 import { BookingSuccess } from "./components/BookingSuccess";
 
@@ -118,7 +119,12 @@ function App() {
           setFlightNotFound(true);
           throw new Error("Рейс не найден");
         }
-        if (!res.ok){ throw new Error("Не удалось загрузить данные рейса");}
+        if (!res.ok) {
+          if (res.status === 404) {
+            setFlightNotFound(true);
+          }
+          throw new Error("Ошибка загрузки рейса");
+        }
         return res.json();
       })
       .then((data: Flight) => {
@@ -214,6 +220,33 @@ function App() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 422 && errorData.errors) {
+          const serverErrors: typeof validationErrors = {};
+          const pErrorsArr: NonNullable<(typeof validationErrors)["passengers"]> = {};
+
+          // Записываем ошибки контактов
+          if (errorData.errors.email) serverErrors.email = errorData.errors.email;
+          if (errorData.errors.phone) serverErrors.phone = errorData.errors.phone;
+
+          // Записываем ошибки для каждого пассажира
+          if (errorData.errors.passengers && Array.isArray(errorData.errors.passengers)) {
+            errorData.errors.passengers.forEach((pErr: Partial<Passenger> | null | undefined, index: number) => {
+              if (pErr) {
+                pErrorsArr[index] = {
+                  firstName: pErr.firstName,
+                  lastName: pErr.lastName,
+                  dateOfBirth: pErr.dateOfBirth,
+                  documentNumber: pErr.documentNumber,
+                };
+              }
+            });
+            serverErrors.passengers = pErrorsArr;
+          }
+
+          setValidationErrors(serverErrors);
+          throw new Error("Ошибка валидации на сервере");
+        }
+
         throw new Error(errorData.message || "Не удалось оформить бронирование");
       }
 
@@ -238,16 +271,8 @@ function App() {
   if (isBookingPage) {
     return (
       <div style={{ maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
-        {/* Глобальная шапка — ВСЕГДА НА МЕСТЕ */}
-        <h1 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "5px" }}>Бронирование авиабилетов</h1>
-        <div style={{ display: "flex", gap: "15px", marginBottom: "25px", fontSize: "14px" }}>
-          <a href="/" style={{ textDecoration: "none", color: "#007bff" }}>
-            Поиск рейсов
-          </a>
-          <a href="/my-bookings" style={{ textDecoration: "none", color: "#007bff" }}>
-            Мои брони
-          </a>
-        </div>
+       
+        <Header />
 
         {/* Переключатель контента */}
         {bookingSuccessData ? (
@@ -273,13 +298,13 @@ function App() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "25px" }}>
               <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
                 Email
-                <input type="email"  placeholder="ivan@example.com" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} style={{ padding: "10px", borderRadius: "6px", border: `1px solid ${validationErrors.email ? "red" : "#ccc"}`, fontSize: "15px" }} />
+                <input type="email" data-testid="contact-email" placeholder="ivan@example.com" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} style={{ padding: "10px", borderRadius: "6px", border: `1px solid ${validationErrors.email ? "red" : "#ccc"}`, fontSize: "15px" }} />
                 {validationErrors.email && <span style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{validationErrors.email}</span>}
               </label>
 
               <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
                 Телефон
-                <input type="tel"  placeholder="+7 999 000-11-22" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} style={{ padding: "10px", borderRadius: "6px", border: `1px solid ${validationErrors.phone ? "red" : "#ccc"}`, fontSize: "15px" }} />
+                <input type="tel" data-testid="contact-phone" placeholder="+7 999 000-11-22" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} style={{ padding: "10px", borderRadius: "6px", border: `1px solid ${validationErrors.phone ? "red" : "#ccc"}`, fontSize: "15px" }} />
                 {validationErrors.phone && <span style={{ color: "red", fontSize: "12px", marginTop: "4px" }}>{validationErrors.phone}</span>}
               </label>
             </div>
@@ -293,10 +318,10 @@ function App() {
             {passengersList.map((passenger, index) => (
               <PassengerForm key={index} passenger={passenger} index={index} onChange={handlePassengerChange} errors={validationErrors.passengers?.[index]} />
             ))}
-            <button type="button" onClick={handleAddPassenger} style={{ padding: "8px 16px", backgroundColor: "#0d6efd", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+            <button type="button" data-testid="add-passenger" onClick={handleAddPassenger} style={{ padding: "8px 16px", backgroundColor: "#0d6efd", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
               Добавить пассажира
             </button>
-            <button type="submit" style={{ padding: "8px 16px", backgroundColor: "#0d6efd", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+            <button type="submit" data-testid="booking-submit" style={{ padding: "8px 16px", backgroundColor: "#0d6efd", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
               Забронировать
             </button>
           </form>
@@ -306,14 +331,7 @@ function App() {
   }
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
-      <h1 data-testid="page-title" style={{ fontSize: "28px", marginBottom: "5px" }}>
-        Бронирование авиабилетов
-      </h1>
-
-      <div style={{ display: "flex", gap: "15px", color: "#0d6efd", marginBottom: "25px", fontSize: "14px" }}>
-        <span style={{ borderBottom: "2px solid #0d6efd", paddingBottom: "3px", cursor: "pointer" }}>Поиск рейсов</span>
-        <span style={{ color: "#6c757d", cursor: "pointer" }}>Мои брони</span>
-      </div>
+      <Header />
 
       <form data-testid="flight-search-form" onSubmit={handleSearch} style={{ display: "flex", gap: "15px", alignItems: "flex-end", backgroundColor: "#fff", padding: "15px 0", marginBottom: "20px" }}>
         <div style={{ flex: 1 }}>
