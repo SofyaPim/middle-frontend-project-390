@@ -44,3 +44,17 @@ export interface BookingResponse {
     currency: string;
   };
 }
+
+
+export interface Booking extends BookingResponse {
+  contact?: {
+    email: string;
+    phone: string;
+  };
+  passengers: Passenger[];
+}
+export interface MyBookingsProps {
+  loading: boolean;
+  error: string | null;
+  bookings: Booking[];
+}

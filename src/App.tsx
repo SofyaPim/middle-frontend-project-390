@@ -1,14 +1,18 @@
 import { useEffect, useState } from "react";
-import type { City, Flight, Passenger, BookingResponse } from "./types";
+import type { City, Flight, Passenger, BookingResponse, Booking } from "./types";
 
 import { Header } from "./components/Header";
 import { PassengerForm } from "./components/PassengerForm";
 import { BookingSuccess } from "./components/BookingSuccess";
+import { MyBookings } from "./components/MyBookings";
+
 
 function App() {
   const currentPath = window.location.pathname;
   const isBookingPage = currentPath.startsWith("/booking/");
+  const isMyBookingsPage = currentPath === "/my-bookings"; 
   const bookingFlightId = isBookingPage ? currentPath.replace("/booking/", "") : null;
+
 
   // Данные из API
   const [cities, setCities] = useState<City[]>([]);
@@ -31,6 +35,15 @@ function App() {
   // Контакты формы бронирования
   const [contactEmail, setContactEmail] = useState<string>("");
   const [contactPhone, setContactPhone] = useState<string>("");
+
+  const [myBookings, setMyBookings] = useState<
+  (BookingResponse & {
+    flightId?: string | null;
+    contact?: { email: string; phone: string };
+    passengers?: Passenger[];
+  })[]
+>([]);
+
 
   // Список пассажиров (по умолчанию стартуем с одного пустого пассажира)
   const [passengersList, setPassengersList] = useState<Passenger[]>([{ firstName: "", lastName: "", dateOfBirth: "", documentNumber: "" }]);
@@ -137,6 +150,31 @@ function App() {
         setLoading(false);
       });
   }, [isBookingPage, bookingFlightId]);
+
+useEffect(() => {
+  if (currentPath !== "/my-bookings") return;
+
+  const fetchBookings = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/bookings");
+      if (!res.ok) throw new Error("Не удалось загрузить список бронирований");
+      
+      const data: Booking[] = await res.json();
+      setMyBookings(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Произошла неизвестная ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchBookings();
+}, [currentPath]);
+
+
   // 1. Функция для добавления нового пассажира в форму
   const handleAddPassenger = () => {
     setPassengersList([...passengersList, { firstName: "", lastName: "", dateOfBirth: "", documentNumber: "" }]);
@@ -265,17 +303,19 @@ function App() {
   };
   console.log(bookingSuccessData, setContactEmail, setContactPhone);
 
-  if (flightNotFound) {
-    return <div data-testid="flight-not-found">Рейс не найден</div>;
-  }
   if (isBookingPage) {
     return (
       <div style={{ maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
        
-        <Header />
+<Header onNavigate={(path) => setLastPath(path)} />
+
 
         {/* Переключатель контента */}
-        {bookingSuccessData ? (
+        {flightNotFound ? (
+          <div data-testid="flight-not-found" style={{ color: "red", padding: "20px", textAlign: "center", border: "1px dashed red", borderRadius: "8px", marginTop: "20px" }}>
+            Рейс не найден
+          </div>
+        ) : bookingSuccessData ? (
           <BookingSuccess bookingData={bookingSuccessData} flight={selectedFlight} />
         ) : (
           <form onSubmit={handleBookingSubmit} data-testid="booking-form">
@@ -292,9 +332,7 @@ function App() {
             ) : (
               <div> Загрузка данных...</div>
             )}
-            {/* временное использование функций для формы, чтобы не ругался TypeScript*/}
-
-            {/* Контактные данные как на образце */}
+                      
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "25px" }}>
               <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
                 Email
@@ -329,9 +367,20 @@ function App() {
       </div>
     );
   }
+  if (isMyBookingsPage) {
+  return (
+    <div style={{ maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
+      <Header onNavigate={(path) => setLastPath(path)} />
+      <MyBookings loading={loading} error={error} bookings={myBookings} />
+    </div>
+  );
+}
+
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
-      <Header />
+     
+<Header onNavigate={(path) => setLastPath(path)} />
+
 
       <form data-testid="flight-search-form" onSubmit={handleSearch} style={{ display: "flex", gap: "15px", alignItems: "flex-end", backgroundColor: "#fff", padding: "15px 0", marginBottom: "20px" }}>
         <div style={{ flex: 1 }}>
