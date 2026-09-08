@@ -301,7 +301,6 @@ useEffect(() => {
     e.preventDefault();
     fetchFlights(origin, destination, date, passengers);
   };
-  console.log(bookingSuccessData, setContactEmail, setContactPhone);
 
   if (isBookingPage) {
     return (

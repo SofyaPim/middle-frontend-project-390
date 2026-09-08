@@ -8,3 +8,6 @@ build:
 
 test:
 	npx playwright test
+start:
+	pnpm build
+	npx @hexlet/frontend-flight-booking-server start -s dist

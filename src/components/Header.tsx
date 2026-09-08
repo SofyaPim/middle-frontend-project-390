@@ -14,7 +14,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
   };
   return (
     <>
-      <h1 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "5px" }}>
+      <h1 data-testid="page-title" style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "5px" }}>
         Бронирование авиабилетов
       </h1>
       <div style={{ display: "flex", gap: "15px", marginBottom: "25px", fontSize: "14px" }}>

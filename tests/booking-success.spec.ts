@@ -11,8 +11,8 @@ test('Успешное оформление бронирования рейса'
 });
 
   // Открываем страницу
-  await page.goto('http://localhost:5173/booking/1');
-
+//   await page.goto('http://localhost:5173/booking/1');
+await page.goto('/booking/fl_1');
   // Убеждаемся, что форма и рейс на месте
   await expect(page.getByTestId('booking-flight')).toBeVisible();
   await expect(page.getByTestId('booking-form')).toBeVisible();
