@@ -304,7 +304,7 @@ useEffect(() => {
 
   if (isBookingPage) {
     return (
-      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
+      <div  data-testid="page-title" style={{ maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
        
 <Header onNavigate={(path) => setLastPath(path)} />
 
