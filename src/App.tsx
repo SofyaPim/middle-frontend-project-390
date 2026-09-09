@@ -188,7 +188,7 @@ function App() {
     e.preventDefault();
   setValidationErrors({});
 
-  // Передаем данные одним объектом (как ожидает функция) и сразу получаем результат
+  // Передаем данные одним объектом 
   const { hasErrors, errors } = validateBookingForm({
     contactEmail,
     contactPhone,
