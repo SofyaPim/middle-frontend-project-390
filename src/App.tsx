@@ -5,14 +5,16 @@ import { Header } from "./components/Header";
 import { PassengerForm } from "./components/PassengerForm";
 import { BookingSuccess } from "./components/BookingSuccess";
 import { MyBookings } from "./components/MyBookings";
+import { FlightCard } from "./components/FlightCard";
+import { BookingFlight } from "./components/BookingFlight";
+import { SearchPage } from "./components/SearchPage";
 
 
 function App() {
   const currentPath = window.location.pathname;
   const isBookingPage = currentPath.startsWith("/booking/");
-  const isMyBookingsPage = currentPath === "/my-bookings"; 
+  const isMyBookingsPage = currentPath === "/my-bookings";
   const bookingFlightId = isBookingPage ? currentPath.replace("/booking/", "") : null;
-
 
   // Данные из API
   const [cities, setCities] = useState<City[]>([]);
@@ -37,13 +39,12 @@ function App() {
   const [contactPhone, setContactPhone] = useState<string>("");
 
   const [myBookings, setMyBookings] = useState<
-  (BookingResponse & {
-    flightId?: string | null;
-    contact?: { email: string; phone: string };
-    passengers?: Passenger[];
-  })[]
->([]);
-
+    (BookingResponse & {
+      flightId?: string | null;
+      contact?: { email: string; phone: string };
+      passengers?: Passenger[];
+    })[]
+  >([]);
 
   // Список пассажиров (по умолчанию стартуем с одного пустого пассажира)
   const [passengersList, setPassengersList] = useState<Passenger[]>([{ firstName: "", lastName: "", dateOfBirth: "", documentNumber: "" }]);
@@ -151,29 +152,28 @@ function App() {
       });
   }, [isBookingPage, bookingFlightId]);
 
-useEffect(() => {
-  if (currentPath !== "/my-bookings") return;
+  useEffect(() => {
+    if (currentPath !== "/my-bookings") return;
 
-  const fetchBookings = async () => {
-    setLoading(true);
-    setError(null);
+    const fetchBookings = async () => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const res = await fetch("/api/bookings");
-      if (!res.ok) throw new Error("Не удалось загрузить список бронирований");
-      
-      const data: Booking[] = await res.json();
-      setMyBookings(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Произошла неизвестная ошибка");
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        const res = await fetch("/api/bookings");
+        if (!res.ok) throw new Error("Не удалось загрузить список бронирований");
 
-  fetchBookings();
-}, [currentPath]);
+        const data: Booking[] = await res.json();
+        setMyBookings(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Произошла неизвестная ошибка");
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchBookings();
+  }, [currentPath]);
 
   // 1. Функция для добавления нового пассажира в форму
   const handleAddPassenger = () => {
@@ -304,10 +304,8 @@ useEffect(() => {
 
   if (isBookingPage) {
     return (
-      <div  data-testid="page-title" style={{ maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
-       
-<Header onNavigate={(path) => setLastPath(path)} />
-
+      <div data-testid="page-title" style={{ maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
+        <Header onNavigate={(path) => setLastPath(path)} />
 
         {/* Переключатель контента */}
         {flightNotFound ? (
@@ -323,15 +321,12 @@ useEffect(() => {
 
             {/* карточка рейса */}
             {selectedFlight ? (
-              <div data-testid="booking-flight" style={{ padding: "15px", margin: " 0 auto" }}>
-                <strong>
-                  {selectedFlight?.origin.name} → {selectedFlight?.destination.name}, {selectedFlight?.flightNumber}
-                </strong>
-              </div>
+             
+              <BookingFlight selectedFlight={selectedFlight} />
             ) : (
               <div> Загрузка данных...</div>
             )}
-                      
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "25px" }}>
               <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
                 Email
@@ -367,59 +362,17 @@ useEffect(() => {
     );
   }
   if (isMyBookingsPage) {
-  return (
-    <div style={{ maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
-      <Header onNavigate={(path) => setLastPath(path)} />
-      <MyBookings loading={loading} error={error} bookings={myBookings} />
-    </div>
-  );
-}
+    return (
+      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
+        <Header onNavigate={(path) => setLastPath(path)} />
+        <MyBookings loading={loading} error={error} bookings={myBookings} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
-     
-<Header onNavigate={(path) => setLastPath(path)} />
-
-
-      <form data-testid="flight-search-form" onSubmit={handleSearch} style={{ display: "flex", gap: "15px", alignItems: "flex-end", backgroundColor: "#fff", padding: "15px 0", marginBottom: "20px" }}>
-        <div style={{ flex: 1 }}>
-          <label style={{ display: "block", fontWeight: "bold", fontSize: "14px", marginBottom: "8px" }}>Откуда</label>
-          <select data-testid="search-origin" value={origin} onChange={(e) => setOrigin(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ced4da" }}>
-            {cities.map((city) => (
-              <option key={city.code} value={city.code}>
-                {city.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ flex: 1 }}>
-          <label style={{ display: "block", fontWeight: "bold", fontSize: "14px", marginBottom: "8px" }}>Куда</label>
-          <select data-testid="search-destination" value={destination} onChange={(e) => setDestination(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ced4da" }}>
-            {cities.map((city) => (
-              <option key={city.code} value={city.code}>
-                {city.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ flex: 1 }}>
-          <label style={{ display: "block", fontWeight: "bold", fontSize: "14px", marginBottom: "8px" }}>Дата</label>
-          <input type="date" data-testid="search-date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: "100%", padding: "9px", borderRadius: "6px", border: "1px solid #ced4da" }} />
-        </div>
-
-        <div style={{ width: "120px" }}>
-          <label style={{ display: "block", fontWeight: "bold", fontSize: "14px", marginBottom: "8px" }}>Пассажиры</label>
-          <input type="number" min="1" data-testid="search-passengers" value={passengers} onChange={(e) => setPassengers(Number(e.target.value))} style={{ width: "100%", padding: "9px", borderRadius: "6px", border: "1px solid #ced4da" }} />
-        </div>
-
-        <div>
-          <button type="submit" data-testid="search-submit" style={{ padding: "11px 24px", backgroundColor: "#1d8bf1", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer" }}>
-            Найти
-          </button>
-        </div>
-      </form>
+      <Header onNavigate={(path) => setLastPath(path)} />
 
       {loading && <p>Загрузка рейсов...</p>}
 
@@ -438,32 +391,7 @@ useEffect(() => {
       {!loading && !error && flights.length > 0 && (
         <div data-testid="flight-results" style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "20px" }}>
           {flights.map((flight) => (
-            <div key={flight.id} data-testid="flight-result-item" style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 4px rgba(0,0,0,0.02)", backgroundColor: "#fff" }}>
-              {/* Левая часть: информация о перелёте */}
-              <div>
-                {/* Авиакомпания и номер рейса по контракту */}
-                <h3 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>
-                  {flight.airline.name} · {flight.flightNumber}
-                </h3>
-                {/* Направления полета */}
-                <p style={{ margin: "0 0 6px 0", color: "#333", fontWeight: "500" }}>
-                  {flight.origin.name} → {flight.destination.name}
-                </p>
-                {/* Время вылета и прилета из контракта */}
-                <p style={{ margin: "0", color: "#888", fontSize: "14px" }}>
-                  {new Date(flight.departureAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })} — {new Date(flight.arrivalAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })} · {flight.durationMinutes} мин
-                </p>
-              </div>
-
-              {/* Правая часть: стоимость из объекта price.amount и кнопка */}
-              <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-                <div style={{ fontSize: "20px", fontWeight: "bold", color: "#000" }}>{flight.price.amount.toLocaleString("ru-RU")} ₽</div>
-
-                <a href={`/booking/${flight.id}`} data-testid="book-flight" style={{ display: "inline-block", padding: "10px 20px", background: "#e3f2fd", color: "#0d6efd", textDecoration: "none", borderRadius: "6px", fontWeight: "500" }}>
-                  Забронировать
-                </a>
-              </div>
-            </div>
+            <FlightCard key={flight.id} flight={flight} />
           ))}
         </div>
       )}

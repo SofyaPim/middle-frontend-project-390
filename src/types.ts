@@ -17,23 +17,21 @@ export interface Money {
 export interface Flight {
   id: string;
   flightNumber: string;
-  airline: Airline;    
+  airline: Airline;
   origin: City;
   destination: City;
-  departureAt: string; 
-  arrivalAt: string;   
+  departureAt: string;
+  arrivalAt: string;
   durationMinutes: number;
-  price: Money;        
+  price: Money;
   seatsAvailable: number;
 }
 
-export interface Passenger{
-  firstName: string,
-  lastName: string,
-   dateOfBirth: string;   
-  documentNumber: string; 
-  
-  
+export interface Passenger {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  documentNumber: string;
 }
 
 export interface BookingResponse {
@@ -44,7 +42,6 @@ export interface BookingResponse {
     currency: string;
   };
 }
-
 
 export interface Booking extends BookingResponse {
   contact?: {
@@ -57,4 +54,19 @@ export interface MyBookingsProps {
   loading: boolean;
   error: string | null;
   bookings: Booking[];
+}
+export interface SearchPageProps {
+  cities: City[];
+  flights: Flight[];
+  loading: boolean;
+  error: string | null;
+  origin: string;
+  setOrigin: (value: string) => void;
+  destination: string;
+  setDestination: (value: string) => void;
+  date: string;
+  setDate: (value: string) => void;
+  passengers: number;
+  setPassengers: (value: number) => void;
+  handleSearch: (e:React.SubmitEvent)=>void;
 }
