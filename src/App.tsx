@@ -320,12 +320,7 @@ function App() {
             <h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "20px" }}>Оформление бронирования</h2>
 
             {/* карточка рейса */}
-            {selectedFlight ? (
-             
-              <BookingFlight selectedFlight={selectedFlight} />
-            ) : (
-              <div> Загрузка данных...</div>
-            )}
+            {selectedFlight ? <BookingFlight selectedFlight={selectedFlight} /> : <div> Загрузка данных...</div>}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "25px" }}>
               <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
@@ -373,6 +368,7 @@ function App() {
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
       <Header onNavigate={(path) => setLastPath(path)} />
+      <SearchPage cities={cities} origin={origin} setOrigin={setOrigin} destination={destination} setDestination={setDestination} date={date} setDate={setDate} passengers={passengers} setPassengers={setPassengers} handleSearch={handleSearch} />
 
       {loading && <p>Загрузка рейсов...</p>}
 

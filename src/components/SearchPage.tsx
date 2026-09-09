@@ -2,9 +2,7 @@ import type { SearchPageProps } from "../types";
 
 export function SearchPage({
   cities,
-  flights,
-  loading,
-  error,
+  
   origin,
   setOrigin,
   destination,

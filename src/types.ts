@@ -57,9 +57,6 @@ export interface MyBookingsProps {
 }
 export interface SearchPageProps {
   cities: City[];
-  flights: Flight[];
-  loading: boolean;
-  error: string | null;
   origin: string;
   setOrigin: (value: string) => void;
   destination: string;
