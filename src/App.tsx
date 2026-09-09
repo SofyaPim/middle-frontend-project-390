@@ -9,6 +9,7 @@ import { FlightCard } from "./components/FlightCard";
 import { BookingFlight } from "./components/BookingFlight";
 import { SearchPage } from "./components/SearchPage";
 
+import { validateBookingForm } from "./utils/bookingValidation";
 
 function App() {
   const currentPath = window.location.pathname;
@@ -185,51 +186,21 @@ function App() {
   // 2. Функция отправки формы бронирования на сервер
   const handleBookingSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
+  setValidationErrors({});
 
-    setValidationErrors({});
-    const errors: typeof validationErrors = {};
-    const pErrorsArr: NonNullable<(typeof validationErrors)["passengers"]> = {};
+  // Передаем данные одним объектом (как ожидает функция) и сразу получаем результат
+  const { hasErrors, errors } = validateBookingForm({
+    contactEmail,
+    contactPhone,
+    passengersList,
+  });
 
-    let hasErrors = false;
+  // Блокировка отправки формы
+  if (hasErrors) {
+    setValidationErrors(errors);
+    return;
+  }
 
-    // Валидация контактов
-    if (!contactEmail.trim()) {
-      errors.email = "Email обязателен";
-      hasErrors = true;
-    } else if (!/\S+@\S+\.\S+/.test(contactEmail)) {
-      errors.email = "Некорректный формат email";
-      hasErrors = true;
-    }
-
-    if (!contactPhone.trim()) {
-      errors.phone = "Телефон обязателен";
-      hasErrors = true;
-    }
-
-    // Валидация списка пассажиров
-    passengersList.forEach((passenger, index) => {
-      const pError: Partial<Record<keyof Passenger, string>> = {};
-
-      if (!passenger.firstName?.trim()) pError.firstName = "Имя обязательно";
-      if (!passenger.lastName?.trim()) pError.lastName = "Фамилия обязательна";
-      if (!passenger.dateOfBirth?.trim()) pError.dateOfBirth = "Дата рождения обязательна";
-      if (!passenger.documentNumber?.trim()) pError.documentNumber = "Документ обязателен";
-
-      if (Object.keys(pError).length > 0) {
-        pErrorsArr[index] = pError;
-        hasErrors = true;
-      }
-    });
-
-    if (Object.keys(pErrorsArr).length > 0) {
-      errors.passengers = pErrorsArr;
-    }
-
-    // Блокировка отправки формы
-    if (hasErrors) {
-      setValidationErrors(errors);
-      return;
-    }
 
     setError(null);
 

@@ -67,3 +67,8 @@ export interface SearchPageProps {
   setPassengers: (value: number) => void;
   handleSearch: (e:React.SubmitEvent)=>void;
 }
+export interface ValidateParams {
+  contactEmail: string;
+  contactPhone: string;
+  passengersList: Passenger[];
+}
