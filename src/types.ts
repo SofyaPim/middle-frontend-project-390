@@ -55,20 +55,12 @@ export interface MyBookingsProps {
   error: string | null;
   bookings: Booking[];
 }
-export interface SearchPageProps {
-  cities: City[];
-  origin: string;
-  setOrigin: (value: string) => void;
-  destination: string;
-  setDestination: (value: string) => void;
-  date: string;
-  setDate: (value: string) => void;
-  passengers: number;
-  setPassengers: (value: number) => void;
-  handleSearch: (e:React.SubmitEvent)=>void;
-}
+
 export interface ValidateParams {
   contactEmail: string;
   contactPhone: string;
   passengersList: Passenger[];
+}
+export interface BookingPageProps {
+  bookingFlightId: string;
 }
