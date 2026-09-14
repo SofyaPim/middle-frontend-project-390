@@ -14,12 +14,12 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
   };
   return (
     <>
-      <h1 data-testid="page-title" style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "5px" }}>
+      <h1 data-testid="page-title" className="site-header__title">
         Бронирование авиабилетов
       </h1>
-      <div style={{ display: "flex", gap: "15px", marginBottom: "25px", fontSize: "14px" }}>
-        <a href="/"   onClick={(e) => handleLinkClick(e, "/")}  style={{ textDecoration: "none", color: "#007bff" }}>Поиск рейсов</a>
-        <a href="/my-bookings"  onClick={(e) => handleLinkClick(e, "/my-bookings")}  style={{ textDecoration: "none", color: "#007bff" }}>Мои брони</a>
+      <div className="site-header__nav">
+        <a href="/" onClick={(e) => handleLinkClick(e, "/")}>Поиск рейсов</a>
+        <a data-testid="nav-lookup" href="/lookup" onClick={(e) => handleLinkClick(e, "/lookup")}>Мои брони</a>
       </div>
     </>
   );

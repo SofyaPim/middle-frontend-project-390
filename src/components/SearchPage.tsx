@@ -75,11 +75,11 @@ export function SearchPage() {
     fetchFlights(origin, destination, date, passengers);
   };
   return (
-    <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
-      <form data-testid="flight-search-form" onSubmit={handleSearch} style={{ display: "flex", gap: "15px", alignItems: "flex-end", backgroundColor: "#fff", padding: "15px 0", marginBottom: "20px" }}>
-        <div style={{ flex: 1 }}>
-          <label style={{ display: "block", fontWeight: "bold", fontSize: "14px", marginBottom: "8px" }}>Откуда</label>
-          <select data-testid="search-origin" value={origin} onChange={(e) => setOrigin(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ced4da" }}>
+    <div className="search-page">
+      <form data-testid="flight-search-form" onSubmit={handleSearch} className="search-form">
+        <div className="search-form__field">
+          <label className="search-form__label">Откуда</label>
+          <select data-testid="search-origin" value={origin} onChange={(e) => setOrigin(e.target.value)} className="search-form__input">
             {cities.map((city) => (
               <option key={city.code} value={city.code}>
                 {city.name}
@@ -88,9 +88,9 @@ export function SearchPage() {
           </select>
         </div>
 
-        <div style={{ flex: 1 }}>
-          <label style={{ display: "block", fontWeight: "bold", fontSize: "14px", marginBottom: "8px" }}>Куда</label>
-          <select data-testid="search-destination" value={destination} onChange={(e) => setDestination(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #ced4da" }}>
+        <div className="search-form__field">
+          <label className="search-form__label">Куда</label>
+          <select data-testid="search-destination" value={destination} onChange={(e) => setDestination(e.target.value)} className="search-form__input">
             {cities.map((city) => (
               <option key={city.code} value={city.code}>
                 {city.name}
@@ -99,18 +99,18 @@ export function SearchPage() {
           </select>
         </div>
 
-        <div style={{ flex: 1 }}>
-          <label style={{ display: "block", fontWeight: "bold", fontSize: "14px", marginBottom: "8px" }}>Дата</label>
-          <input type="date" data-testid="search-date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: "100%", padding: "9px", borderRadius: "6px", border: "1px solid #ced4da" }} />
+        <div className="search-form__field">
+          <label className="search-form__label">Дата</label>
+          <input type="date" data-testid="search-date" value={date} onChange={(e) => setDate(e.target.value)} className="search-form__input" />
         </div>
 
-        <div style={{ width: "120px" }}>
-          <label style={{ display: "block", fontWeight: "bold", fontSize: "14px", marginBottom: "8px" }}>Пассажиры</label>
-          <input type="number" min="1" data-testid="search-passengers" value={passengers} onChange={(e) => setPassengers(Number(e.target.value))} style={{ width: "100%", padding: "9px", borderRadius: "6px", border: "1px solid #ced4da" }} />
+        <div className="search-form__field search-form__field--passengers">
+          <label className="search-form__label">Пассажиры</label>
+          <input type="number" min="1" data-testid="search-passengers" value={passengers} onChange={(e) => setPassengers(Number(e.target.value))} className="search-form__input" />
         </div>
 
         <div>
-          <button type="submit" data-testid="search-submit" style={{ padding: "11px 24px", backgroundColor: "#1d8bf1", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer" }}>
+          <button type="submit" data-testid="search-submit" className="button button--search">
             Найти
           </button>
         </div>
@@ -118,19 +118,19 @@ export function SearchPage() {
       {loading && <p>Загрузка рейсов...</p>}
 
       {error && (
-        <div data-testid="booking-error" style={{ color: "red", padding: "10px", border: "1px solid red", marginBottom: "20px", borderRadius: "4px" }}>
+        <div data-testid="booking-error" className="status-message status-message--error search-page__error">
           Произошла ошибка запроса: {error}
         </div>
       )}
 
       {!loading && !error && flights.length === 0 && (
-        <p data-testid="flights-empty" style={{ fontStyle: "italic", color: "#666", marginTop: "20px" }}>
+        <p data-testid="flights-empty" className="search-page__empty">
           рейсов не найдено
         </p>
       )}
 
       {!loading && !error && flights.length > 0 && (
-        <div data-testid="flight-results" style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "20px" }}>
+        <div data-testid="flight-results" className="flight-results">
           {flights.map((flight) => (
             <FlightCard key={flight.id} flight={flight} />
           ))}

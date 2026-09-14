@@ -41,10 +41,20 @@ export interface BookingResponse {
     amount: number;
     currency: string;
   };
+  flight?: Flight;
+  status?: "confirmed" | "cancelled";
+  createdAt?: string;
+  contact?: {
+    email: string;
+    phone: string;
+  };
 }
 
 export interface Booking extends BookingResponse {
-  contact?: {
+  flight: Flight;
+  status: "confirmed" | "cancelled";
+  createdAt: string;
+  contact: {
     email: string;
     phone: string;
   };

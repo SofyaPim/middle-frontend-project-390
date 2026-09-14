@@ -85,13 +85,22 @@ export function BookingPage({ bookingFlightId }: BookingPageProps) {
       return;
     }
 
+    if (!selectedFlight) {
+      setError("Не удалось определить рейс");
+      return;
+    }
+
     const requestBody = {
-      flight_id: selectedFlight?.id,
+      flightId: selectedFlight.id,
+      contact: {
+        email: contactEmail,
+        phone: contactPhone,
+      },
       passengers: passengersList.map(p => ({
-        first_name: p.firstName,
-        last_name: p.lastName,
-        birth_date: p.dateOfBirth,
-        document_number: p.documentNumber
+        firstName: p.firstName,
+        lastName: p.lastName,
+        dateOfBirth: p.dateOfBirth,
+        documentNumber: p.documentNumber,
       }))
     };
 
@@ -146,7 +155,7 @@ export function BookingPage({ bookingFlightId }: BookingPageProps) {
    // 5. Точно такой же переключатель контента, который был в App.tsx
   if (flightNotFound) {
     return (
-      <div data-testid="flight-not-found" style={{ color: "red", padding: "20px", textAlign: "center", border: "1px dashed red", borderRadius: "8px", marginTop: "20px" }}>
+      <div data-testid="flight-not-found" className="status-message status-message--not-found">
         Рейс не найден
       </div>
     );
@@ -155,12 +164,12 @@ export function BookingPage({ bookingFlightId }: BookingPageProps) {
   if (bookingSuccessData) {
     return <BookingSuccess bookingData={bookingSuccessData} flight={selectedFlight} />;
   }
- if (error && !selectedFlight) return <p style={{ color: "red", padding: "20px" }}>{error}</p>;
+ if (error && !selectedFlight) return <p className="status-message status-message--error">{error}</p>;
   if (!selectedFlight) return null;
   return (
     <>
       {/* Заголовок формы */}
-      <h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "20px" }}>Оформление бронирования</h2>
+      <h2 className="booking-page__title">Оформление бронирования</h2>
       
       {/* Карточка рейса с лоадером */}
       {loading ? (
@@ -170,11 +179,11 @@ export function BookingPage({ bookingFlightId }: BookingPageProps) {
       )}
 
       {/* Сама форма */}
-      <form onSubmit={handleBookingSubmit} data-testid="booking-form" style={{ display: "flex", flexDirection: "column", gap: "20px", marginTop: "20px" }}>
+      <form onSubmit={handleBookingSubmit} data-testid="booking-form" className="booking-form">
         <div>
           <h3>Контактные данные</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
+          <div className="booking-form__contact-fields">
+            <label className="form-field">
               Email
               <input
                 type="email"
@@ -182,21 +191,21 @@ export function BookingPage({ bookingFlightId }: BookingPageProps) {
                 placeholder="ivan@example.com"
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
-                style={{ width: "100%", padding: "8px", marginTop: "5px" }}
+                className="form-field__input"
               />
             </label>
-            {validationErrors.email && <p style={{ color: "red", margin: 0 }}>{validationErrors.email}</p>}
+            {validationErrors.email && <p className="field-error">{validationErrors.email}</p>}
 
-            <label style={{ display: "flex", flexDirection: "column", gap: "8px", fontWeight: "bold", fontSize: "14px" }}>
+            <label className="form-field">
               Телефон
               <input
                 type="tel"
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
-                style={{ width: "100%", padding: "8px", marginTop: "5px" }}
+                className="form-field__input"
               />
             </label>
-            {validationErrors.phone && <p style={{ color: "red", margin: 0 }}>{validationErrors.phone}</p>}
+            {validationErrors.phone && <p className="field-error">{validationErrors.phone}</p>}
           </div>
         </div>
 
@@ -212,14 +221,14 @@ export function BookingPage({ bookingFlightId }: BookingPageProps) {
             />
           ))}
 
-          <button type="button" onClick={handleAddPassenger} style={{ marginTop: "10px", padding: "8px 16px" }}>
+          <button type="button" onClick={handleAddPassenger} className="button button--secondary">
             Добавить пассажира
           </button>
         </div>
 
-        {error && <p style={{ color: "red" }}>{error}</p>}
+        {error && <p className="field-error">{error}</p>}
 
-        <button type="submit" style={{ padding: "12px", backgroundColor: "#007bff", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "16px" }}>
+        <button type="submit" className="button button--primary">
           Подтвердить бронирование
         </button>
       </form>

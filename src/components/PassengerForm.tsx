@@ -10,10 +10,10 @@ interface PassengerFormProps {
 }  
 export const PassengerForm: React.FC<PassengerFormProps> = ({ passenger, index, onChange,  errors}) => {
   return (
-    <div style={{ border: "1px solid #ccc", padding: "10px", marginBottom: "10px" }}>
+    <div className="passenger-form">
       <h3>Пассажир {index + 1}</h3>
-      <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
-        <label style={{display:'flex', flexDirection:'column' , gap:'4px'}}>
+      <div className="passenger-form__fields">
+        <label className="passenger-form__field">
           Имя (латницей):
           <input
             type="text"
@@ -21,12 +21,12 @@ export const PassengerForm: React.FC<PassengerFormProps> = ({ passenger, index, 
              data-testid={`passenger-${index}-firstName`}
             value={passenger.firstName}
             onChange={(e) => onChange(index, { firstName: e.target.value })}
-            style={{padding:'6px', borderRadius: '4px', border: '1px solid #ccc',  borderColor: errors?.firstName ? 'red' : '#ccc'}}
+            className={`passenger-form__input${errors?.firstName ? " passenger-form__input--error" : ""}`}
           />
-        {errors?.firstName && <span style={{ color: 'red', fontSize: '12px' }}>{errors.firstName}</span>}
+        {errors?.firstName && <span className="field-error">{errors.firstName}</span>}
         </label>
       
-        <label style={{display:'flex', flexDirection:'column' , gap:'4px'}}>
+        <label className="passenger-form__field">
           Фамилия:
           <input
             type="text"
@@ -34,12 +34,12 @@ export const PassengerForm: React.FC<PassengerFormProps> = ({ passenger, index, 
            data-testid={`passenger-${index}-lastName`}
            value={passenger.lastName}
            onChange={(e) => onChange(index, { lastName: e.target.value })}
-           style={{padding:'6px', borderRadius: '4px', border: '1px solid #ccc',  borderColor: errors?.lastName ? 'red' : '#ccc'}}
+           className={`passenger-form__input${errors?.lastName ? " passenger-form__input--error" : ""}`}
            />
-           {errors?.lastName && <span style={{ color: 'red', fontSize: '12px' }}>{errors.lastName}</span>}
+           {errors?.lastName && <span className="field-error">{errors.lastName}</span>}
         </label>
       
-        <label style={{display:'flex', flexDirection:'column' , gap:'4px'}}>
+        <label className="passenger-form__field">
           Дата рождения:
           <input
             type="date"
@@ -47,12 +47,12 @@ export const PassengerForm: React.FC<PassengerFormProps> = ({ passenger, index, 
             data-testid={`passenger-${index}-dateOfBirth`}
             value={passenger.dateOfBirth}
             onChange={(e) => onChange(index, { dateOfBirth: e.target.value })}
-            style={{padding:'6px', borderRadius: '4px', border: '1px solid #ccc',  borderColor: errors?.dateOfBirth ? 'red' : '#ccc'}}
+            className={`passenger-form__input${errors?.dateOfBirth ? " passenger-form__input--error" : ""}`}
             />
-            {errors?.dateOfBirth && <span style={{ color: 'red', fontSize: '12px' }}>{errors.dateOfBirth}</span>}
+            {errors?.dateOfBirth && <span className="field-error">{errors.dateOfBirth}</span>}
         
         </label>
-        <label style={{display:'flex', flexDirection:'column' , gap:'4px'}}>
+        <label className="passenger-form__field">
           Серия и номер документа:
           <input
             type="text"
@@ -60,9 +60,9 @@ export const PassengerForm: React.FC<PassengerFormProps> = ({ passenger, index, 
             data-testid={`passenger-${index}-documentNumber`}
             value={passenger.documentNumber}
              onChange={(e) => onChange(index, { documentNumber: e.target.value })}
-            style={{padding:'6px', borderRadius: '4px', border: '1px solid #ccc',  borderColor: errors?.documentNumber ? 'red' : '#ccc'}}
+            className={`passenger-form__input${errors?.documentNumber ? " passenger-form__input--error" : ""}`}
           />
-       {errors?.documentNumber && <span style={{ color: 'red', fontSize: '12px' }}>{errors.documentNumber}</span>}
+      {errors?.documentNumber && <span className="field-error">{errors.documentNumber}</span>}
           </label>
       </div>
     </div>

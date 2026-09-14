@@ -7,7 +7,7 @@ interface BookingFlightProps {
 
 export const BookingFlight: React.FC<BookingFlightProps> = ({ selectedFlight }) => {
   return (
-    <div data-testid="booking-flight" style={{ padding: "15px", margin: "0 auto" }}>
+    <div data-testid="booking-flight" className="booking-flight">
       <strong>
         {selectedFlight?.origin.name} → {selectedFlight?.destination.name}, {selectedFlight?.flightNumber}
       </strong>
