@@ -14,7 +14,7 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingData, fli
       <h2 className="booking-success__title">Бронирование оформлено</h2>
 
       <p className="booking-success__detail">
-        Код бронирования: <strong data-testid="booking-code">{bookingData.code}</strong>
+        Код Вашего бронирования: <strong data-testid="booking-code">{bookingData.code}</strong>
       </p>
 
       <div className="booking-card">
