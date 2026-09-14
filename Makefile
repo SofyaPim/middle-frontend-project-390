@@ -9,5 +9,5 @@ build:
 test:
 	npx playwright test
 start:
-	
-	npx @hexlet/frontend-flight-booking-server start -s dist
+	PORT=$${PORT:-8080} ./node_modules/.bin/frontend-flight-booking-server start -s dist
+# npx @hexlet/frontend-flight-booking-server start -s dist
