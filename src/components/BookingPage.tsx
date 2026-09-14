@@ -200,6 +200,7 @@ export function BookingPage({ bookingFlightId }: BookingPageProps) {
               Телефон
               <input
                 type="tel"
+                data-testid="contact-phone"
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
                 className="form-field__input"
@@ -221,14 +222,14 @@ export function BookingPage({ bookingFlightId }: BookingPageProps) {
             />
           ))}
 
-          <button type="button" onClick={handleAddPassenger} className="button button--secondary">
+          <button type="button" data-testid="add-passenger" onClick={handleAddPassenger} className="button button--secondary">
             Добавить пассажира
           </button>
         </div>
 
         {error && <p className="field-error">{error}</p>}
 
-        <button type="submit" className="button button--primary">
+        <button type="submit" data-testid="booking-submit" className="button button--primary">
           Подтвердить бронирование
         </button>
       </form>
