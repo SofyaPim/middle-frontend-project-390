@@ -108,6 +108,15 @@ body {
   font-weight: bold;
 }
 
+.button--sentry-test {
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  color: #6f1d1b;
+  background-color: #f8d7da;
+  border: 1px solid #f1aeb5;
+  border-radius: 4px;
+}
+
 .button--primary {
   padding: 12px;
   color: #fff;
