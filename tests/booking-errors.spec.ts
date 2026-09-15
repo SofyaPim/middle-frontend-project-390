@@ -22,8 +22,8 @@ await page.goto('/booking/fl_1');
 
   await page.getByTestId("passenger-0-firstName").fill("Ivan");
   await page.getByTestId("passenger-0-lastName").fill("Ivanov");
-  await page.getByTestId("passenger-0-dateOfBirth").fill("1990-01-01");
-  await page.getByTestId("passenger-0-documentNumber").fill("1234567890");
+  await page.getByTestId("passenger-0-dob").fill("1990-01-01");
+  await page.getByTestId("passenger-0-document").fill("1234567890");
 
 
   await page.locator('button[type="submit"]').click();

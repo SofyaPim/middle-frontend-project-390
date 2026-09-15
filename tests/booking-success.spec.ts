@@ -27,14 +27,14 @@ await page.goto('/booking/fl_1');
   // Заполняем первого пассажира (индекс 0)
   await page.getByTestId('passenger-0-firstName').fill('Ivan');
   await page.getByTestId('passenger-0-lastName').fill('Ivanov');
-    await page.getByTestId("passenger-0-dateOfBirth").fill("1990-01-01");
-  await page.getByTestId("passenger-0-documentNumber").fill("1234567890");
+    await page.getByTestId("passenger-0-dob").fill("1990-01-01");
+  await page.getByTestId("passenger-0-document").fill("1234567890");
 
   // Заполняем только что добавленного второго пассажира (индекс 1)
   await page.getByTestId('passenger-1-firstName').fill('Petr');
   await page.getByTestId('passenger-1-lastName').fill('Petrov');
-  await page.getByTestId("passenger-1-dateOfBirth").fill("1990-01-01");
-  await page.getByTestId("passenger-1-documentNumber").fill("1234567890");
+  await page.getByTestId("passenger-1-dob").fill("1990-01-01");
+  await page.getByTestId("passenger-1-document").fill("1234567890");
 
   // Отправляем форму
   await page.getByTestId('booking-submit').click();
