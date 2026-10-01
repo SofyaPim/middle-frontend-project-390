@@ -5,59 +5,57 @@ import { PassengerForm } from "./PassengerForm";
 import { BookingSuccess } from "./BookingSuccess";
 import { BookingFlight } from "./BookingFlight";
 import { validateBookingForm } from "../utils/bookingValidation";
-
-
+import { ApiError, createBooking, getFlight } from "../api";
 
 export function BookingPage() {
   const { flightId } = useParams();
-  const flightIdToLoad = flightId ?? "";;
+  const flightIdToLoad = flightId ?? "";
   // 1. Локальные стейты страницы бронирования
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
   const [flightNotFound, setFlightNotFound] = useState(false);
   const [bookingSuccessData, setBookingSuccessData] = useState<BookingResponse | null>(null);
-  
+
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
-  const [passengersList, setPassengersList] = useState<Passenger[]>([
-    { firstName: "", lastName: "", dateOfBirth: "", documentNumber: "" }
-  ]);
+  const [passengersList, setPassengersList] = useState<Passenger[]>([{ firstName: "", lastName: "", dateOfBirth: "", documentNumber: "" }]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
- const [validationErrors, setValidationErrors] = useState<{
+  const [validationErrors, setValidationErrors] = useState<{
     email?: string;
     phone?: string;
     passengers?: Record<number, Partial<Record<keyof Passenger, string>>>;
   }>({});
 
   // 2. Эффект загрузки информации о рейсе по его ID
-  useEffect(() => { 
+  useEffect(() => {
+    let ignore = false;
 
-    fetch(`/api/flights/${flightIdToLoad}`)
-      .then((res) => {
-        if (res.status === 404) {
+    (async () => {
+      try {
+        const flight = await getFlight(flightIdToLoad);
+        if (ignore) return;
+        setSelectedFlight(flight);
+      } catch (err) {
+        if (ignore) return;
+        if (err instanceof ApiError && err.status === 404) {
           setFlightNotFound(true);
-          throw new Error("Рейс не найден");
+        } else {
+          setError(err instanceof Error ? err.message : "Ошибка при загрузке рейса");
         }
-        if (!res.ok) throw new Error("Ошибка при загрузке рейса");
-        return res.json();
-      })
-      .then((data) => {
-        setSelectedFlight(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
   }, [flightIdToLoad]);
 
   // 3. Управление списком пассажиров (добавление и изменение полей)
   const handleAddPassenger = () => {
-    setPassengersList([
-      ...passengersList,
-      { firstName: "", lastName: "", dateOfBirth: "", documentNumber: "" }
-    ]);
+    setPassengersList([...passengersList, { firstName: "", lastName: "", dateOfBirth: "", documentNumber: "" }]);
   };
 
   const handlePassengerChange = (index: number, partialPassenger: Partial<Passenger>) => {
@@ -73,10 +71,10 @@ export function BookingPage() {
     setError(null);
 
     const { hasErrors, errors } = validateBookingForm({
-    contactEmail,
-    contactPhone,
-    passengersList,
-  });
+      contactEmail,
+      contactPhone,
+      passengersList,
+    });
 
     if (hasErrors) {
       setValidationErrors(errors);
@@ -99,63 +97,48 @@ export function BookingPage() {
         email: contactEmail,
         phone: contactPhone,
       },
-      passengers: passengersList.map(p => ({
+      passengers: passengersList.map((p) => ({
         firstName: p.firstName,
         lastName: p.lastName,
         dateOfBirth: p.dateOfBirth,
         documentNumber: p.documentNumber,
-      }))
+      })),
     };
 
     try {
-      const response = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody)
-      });
+      setBookingSuccessData(await createBooking(requestBody));
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 422 && err.body?.errors) {
+        const serverErrors: typeof validationErrors = {};
+        const pErrorsArr: NonNullable<(typeof validationErrors)["passengers"]> = {};
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (response.status === 422 && errorData.errors) {
-          const serverErrors: typeof validationErrors = {};
-          const pErrorsArr: NonNullable<(typeof validationErrors)["passengers"]> = {};
+        if (err.body.errors.email) serverErrors.email = err.body.errors.email;
+        if (err.body.errors.phone) serverErrors.phone = err.body.errors.phone;
 
-          // Записываем ошибки контактов
-          if (errorData.errors.email) serverErrors.email = errorData.errors.email;
-          if (errorData.errors.phone) serverErrors.phone = errorData.errors.phone;
-
-          // Записываем ошибки для каждого пассажира
-          if (errorData.errors.passengers && Array.isArray(errorData.errors.passengers)) {
-            errorData.errors.passengers.forEach((pErr: Partial<Passenger> | null | undefined, index: number) => {
-              if (pErr) {
-                pErrorsArr[index] = {
-                  firstName: pErr.firstName,
-                  lastName: pErr.lastName,
-                  dateOfBirth: pErr.dateOfBirth,
-                  documentNumber: pErr.documentNumber,
-                };
-              }
-            });
-            serverErrors.passengers = pErrorsArr;
+        err.body.errors.passengers?.forEach((pErr, index) => {
+          if (pErr) {
+            pErrorsArr[index] = {
+              firstName: pErr.firstName,
+              lastName: pErr.lastName,
+              dateOfBirth: pErr.dateOfBirth,
+              documentNumber: pErr.documentNumber,
+            };
           }
+        });
+        serverErrors.passengers = pErrorsArr;
 
-          setValidationErrors(serverErrors);
-          throw new Error("Ошибка валидации на сервере");
-        }
-
-        throw new Error(errorData.message || "Не удалось оформить бронирование");
+        setValidationErrors(serverErrors);
+        setError("Ошибка валидации на сервере");
+        return;
       }
 
-      const result = await response.json();
-      setBookingSuccessData(result);
-    } catch(err) {
       const errorMessage = err instanceof Error ? err.message : "Произошла неизвестная ошибка";
       console.error(errorMessage);
       setError(errorMessage);
     }
   };
 
-   // 5. Точно такой же переключатель контента, который был в App.tsx
+  // 5. Точно такой же переключатель контента, который был в App.tsx
   if (flightNotFound) {
     return (
       <div data-testid="flight-not-found" className="status-message status-message--not-found">
@@ -167,19 +150,15 @@ export function BookingPage() {
   if (bookingSuccessData) {
     return <BookingSuccess bookingData={bookingSuccessData} flight={selectedFlight} />;
   }
- if (error && !selectedFlight) return <p className="status-message status-message--error">{error}</p>;
+  if (error && !selectedFlight) return <p className="status-message status-message--error">{error}</p>;
   if (!selectedFlight) return null;
   return (
     <>
       {/* Заголовок формы */}
       <h2 className="booking-page__title">Оформление бронирования</h2>
-      
+
       {/* Карточка рейса с лоадером */}
-      {loading ? (
-        <div>Загрузка данных...</div>
-      ) : (
-        <BookingFlight selectedFlight={selectedFlight} />
-      )}
+      {loading ? <div>Загрузка данных...</div> : <BookingFlight selectedFlight={selectedFlight} />}
 
       {/* Сама форма */}
       <form onSubmit={handleBookingSubmit} data-testid="booking-form" className="booking-form">
@@ -188,26 +167,13 @@ export function BookingPage() {
           <div className="booking-form__contact-fields">
             <label className="form-field">
               Email
-              <input
-                type="email"
-                data-testid="contact-email"
-                placeholder="ivan@example.com"
-                value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
-                className="form-field__input"
-              />
+              <input type="email" data-testid="contact-email" placeholder="ivan@example.com" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="form-field__input" />
             </label>
             {validationErrors.email && <p className="field-error">{validationErrors.email}</p>}
 
             <label className="form-field">
               Телефон
-              <input
-                type="tel"
-                data-testid="contact-phone"
-                value={contactPhone}
-                onChange={(e) => setContactPhone(e.target.value)}
-                className="form-field__input"
-              />
+              <input type="tel" data-testid="contact-phone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="form-field__input" />
             </label>
             {validationErrors.phone && <p className="field-error">{validationErrors.phone}</p>}
           </div>
@@ -216,13 +182,7 @@ export function BookingPage() {
         <div>
           <h3>Пассажиры</h3>
           {passengersList.map((passenger, index) => (
-            <PassengerForm
-              key={index}
-              index={index}
-              passenger={passenger}
-              onChange={handlePassengerChange}
-              errors={validationErrors.passengers?.[index] || {}}
-            />
+            <PassengerForm key={index} index={index} passenger={passenger} onChange={handlePassengerChange} errors={validationErrors.passengers?.[index] || {}} />
           ))}
 
           <button type="button" data-testid="add-passenger" onClick={handleAddPassenger} className="button button--secondary">

@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/browser";
 import { useSearchParams } from "react-router";
 import { useEffect, useState } from "react";
 import type { City, Flight } from "../types";
+import { getCities, searchFlights } from "../api";
 import { FlightCard } from "./FlightCard";
 
 export function SearchPage() {
@@ -29,18 +30,14 @@ export function SearchPage() {
     // запрос, его ответ не должен затирать новый.
     let ignore = false;
 
-    const query = new URLSearchParams({
-      origin,
-      destination,
-      date: params.get("date") ?? new Date().toISOString().split("T")[0],
-      passengers: params.get("passengers") ?? "1",
-    });
-
     (async () => {
       try {
-        const response = await fetch(`/api/flights?${query.toString()}`);
-        if (!response.ok) throw new Error("Ошибка при поиске рейсов");
-        const data: Flight[] = await response.json();
+        const data = await searchFlights({
+          origin,
+          destination,
+          date: params.get("date") ?? new Date().toISOString().split("T")[0],
+          passengers: params.get("passengers") ?? "1",
+        });
         if (ignore) return;
         setFlights(data);
       } catch (err) {
@@ -55,42 +52,41 @@ export function SearchPage() {
       ignore = true;
     };
   }, [searchKey]);
-  // Справочник городов грузится один раз за всё приложение.
+
   useEffect(() => {
-    fetch("/api/cities")
-      .then((res) => {
-        if (!res.ok) throw new Error("Не удалось загрузить список городов");
-        return res.json();
-      })
-      .then((data: City[]) => {
+    (async () => {
+      try {
+        const data = await getCities();
         setCities(data);
+
         if (searchParams.get("origin") && searchParams.get("destination")) {
           return;
         }
 
-        if (data.length >= 2) {
-          const [from, to] = data;
-          // replace: авто-поиск при первом входе не должен засорять историю,
-          // иначе «Назад» на главной уводит на предыдущую главную.
-          setSearchParams(
-            {
-              origin: from.code,
-              destination: to.code,
-              date: new Date().toISOString().split("T")[0],
-              passengers: "1",
-            },
-            { replace: true },
-          );
-        } else {
+        if (data.length < 2) {
           setError("Не удалось определить города для поиска");
           setLoading(false);
+          return;
         }
-      })
-      .catch((err) => {
-        console.error("Ошибка запроса к моку:", err);
+
+        const [from, to] = data;
+        // replace: авто-поиск при первом входе не должен засорять историю,
+        // иначе «Назад» на главной уводит на предыдущую главную.
+        setSearchParams(
+          {
+            origin: from.code,
+            destination: to.code,
+            date: new Date().toISOString().split("T")[0],
+            passengers: "1",
+          },
+          { replace: true },
+        );
+      } catch (err) {
         setError(err instanceof Error ? err.message : "Не удалось загрузить список городов");
         setLoading(false);
-      });
+      }
+    })();
+
     // Справочник городов — статичные данные, грузим один раз за всё приложение.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
