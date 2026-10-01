@@ -7,35 +7,24 @@ import { FlightCard } from "./FlightCard";
 export function SearchPage() {
   const [cities, setCities] = useState<City[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [searchState, setSearchState] = useState<{
-    key: string;
-    flights: Flight[];
-    error: string | null;
-  } | null>(null);
-
-  // Показываем результат только если он относится к текущему поиску в URL.
-  // Иначе во время нового запроса мигали бы рейсы предыдущего.
+  const [flights, setFlights] = useState<Flight[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const searchKey = searchParams.toString();
-  const isCurrentSearch = searchState?.key === searchKey;
-  const flights = isCurrentSearch && searchState ? searchState.flights : [];
-  const error = isCurrentSearch && searchState ? searchState.error : null;
-  const loading = !isCurrentSearch;
 
-  // Значения полей читаются из URL, а не живут в состоянии.
   const originParam = searchParams.get("origin") ?? "";
   const destinationParam = searchParams.get("destination") ?? "";
   const dateParam = searchParams.get("date") ?? new Date().toISOString().split("T")[0];
   const passengersParam = searchParams.get("passengers") ?? "1";
 
-   useEffect(() => {
-    // Разбираем searchKey вместо чтения внешних переменных:
-    // так эффект зависит ровно от одной величины — от адреса.
+  useEffect(() => {
     const params = new URLSearchParams(searchKey);
     const origin = params.get("origin");
     const destination = params.get("destination");
     if (!origin || !destination) {
       return;
     }
+
     // ignore защищает от гонки: если URL сменился, пока летел предыдущий
     // запрос, его ответ не должен затирать новый.
     let ignore = false;
@@ -47,19 +36,20 @@ export function SearchPage() {
       passengers: params.get("passengers") ?? "1",
     });
 
-    fetch(`/api/flights?${query.toString()}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Ошибка при поиске рейсов");
-        return res.json();
-      })
-      .then((data: Flight[]) => {
+    (async () => {
+      try {
+        const response = await fetch(`/api/flights?${query.toString()}`);
+        if (!response.ok) throw new Error("Ошибка при поиске рейсов");
+        const data: Flight[] = await response.json();
         if (ignore) return;
-        setSearchState({ key: searchKey, flights: data, error: null });
-      })
-      .catch((err) => {
+        setFlights(data);
+      } catch (err) {
         if (ignore) return;
-        setSearchState({ key: searchKey, flights: [], error: err.message });
-      });
+        setError(err instanceof Error ? err.message : "Ошибка при поиске рейсов");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
 
     return () => {
       ignore = true;
@@ -92,12 +82,14 @@ export function SearchPage() {
             { replace: true },
           );
         } else {
-          setSearchState({ key: searchParams.toString(), flights: [], error: null });
+          setError("Не удалось определить города для поиска");
+          setLoading(false);
         }
       })
       .catch((err) => {
         console.error("Ошибка запроса к моку:", err);
-        setSearchState({ key: searchParams.toString(), flights: [], error: err.message });
+        setError(err instanceof Error ? err.message : "Не удалось загрузить список городов");
+        setLoading(false);
       });
     // Справочник городов — статичные данные, грузим один раз за всё приложение.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,14 +97,23 @@ export function SearchPage() {
 
   const handleSearch = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Значения читаем прямо из формы — состояния с полями больше нет.
     const formData = new FormData(e.currentTarget);
-    setSearchParams({
+    const next = {
       origin: String(formData.get("origin")),
       destination: String(formData.get("destination")),
       date: String(formData.get("date")),
       passengers: String(formData.get("passengers")),
-    });
+    };
+
+    // Очищаем список в том же такте, что и клик. React Router применяет
+    // навигацию позже, и если оставить старые рейсы на экране, тест успеет
+    // посчитать их вместо результатов нового поиска.
+    if (new URLSearchParams(next).toString() !== searchKey) {
+      setFlights([]);
+      setLoading(true);
+    }
+
+    setSearchParams(next);
   };
   const triggerSentryTestError = () => {
     const error = new Error("Sentry test error from flight booking app");
@@ -124,12 +125,7 @@ export function SearchPage() {
       <button type="button" className="button button--sentry-test" data-testid="sentry-test-error" onClick={triggerSentryTestError}>
         Отправить тестовую ошибку
       </button>
-<form
-        key={`${searchKey}::${cities.length}`}
-        data-testid="flight-search-form"
-        onSubmit={handleSearch}
-        className="search-form"
-      >
+      <form key={`${searchKey}::${cities.length}`} data-testid="flight-search-form" onSubmit={handleSearch} className="search-form">
         <div className="search-form__field">
           <label className="search-form__label">Откуда</label>
           <select name="origin" data-testid="search-origin" defaultValue={originParam} className="search-form__input">
