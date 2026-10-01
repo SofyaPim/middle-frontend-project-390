@@ -1,5 +1,5 @@
-import React from 'react';
-import type { Flight } from '../types';
+import { Link } from "react-router";
+import type { Flight } from "../types";
 
 interface FlightCardProps {
   flight: Flight;
@@ -15,21 +15,15 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
         <p className="flight-card__route">
           {flight.origin.name} → {flight.destination.name}
         </p>
-        <p className="flight-card__duration">
-          Время в пути: {flight.durationMinutes} мин
-        </p>
+        <p className="flight-card__duration">Время в пути: {flight.durationMinutes} мин</p>
       </div>
       <div className="flight-card__price-block">
         <span className="flight-card__price">
-          {flight.price.amount.toLocaleString('ru-RU')} {flight.price.currency === 'RUB' ? '₽' : flight.price.currency}
+          {flight.price.amount.toLocaleString("ru-RU")} {flight.price.currency === "RUB" ? "₽" : flight.price.currency}
         </span>
-        <a
-          href={`/booking/${flight.id}`}
-          data-testid="book-flight"
-          className="flight-card__link"
-        >
+        <Link to={`/booking/${flight.id}`} data-testid="book-flight" className="flight-card__link">
           Забронировать
-        </a>
+        </Link>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
+import { useParams } from "react-router";
 import { useState, useEffect } from "react";
-import type { Flight, Passenger, BookingPageProps, BookingResponse } from "../types";
+import type { Flight, Passenger, BookingResponse } from "../types";
 import { PassengerForm } from "./PassengerForm";
 import { BookingSuccess } from "./BookingSuccess";
 import { BookingFlight } from "./BookingFlight";
@@ -7,7 +8,9 @@ import { validateBookingForm } from "../utils/bookingValidation";
 
 
 
-export function BookingPage({ bookingFlightId }: BookingPageProps) {
+export function BookingPage() {
+  const { flightId } = useParams();
+  const flightIdToLoad = flightId ?? "";;
   // 1. Локальные стейты страницы бронирования
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
   const [flightNotFound, setFlightNotFound] = useState(false);
@@ -30,7 +33,7 @@ export function BookingPage({ bookingFlightId }: BookingPageProps) {
   // 2. Эффект загрузки информации о рейсе по его ID
   useEffect(() => { 
 
-    fetch(`/api/flights/${bookingFlightId}`)
+    fetch(`/api/flights/${flightIdToLoad}`)
       .then((res) => {
         if (res.status === 404) {
           setFlightNotFound(true);
@@ -47,7 +50,7 @@ export function BookingPage({ bookingFlightId }: BookingPageProps) {
         setError(err.message);
         setLoading(false);
       });
-  }, [bookingFlightId]);
+  }, [flightIdToLoad]);
 
   // 3. Управление списком пассажиров (добавление и изменение полей)
   const handleAddPassenger = () => {

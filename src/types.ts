@@ -71,6 +71,3 @@ export interface ValidateParams {
   contactPhone: string;
   passengersList: Passenger[];
 }
-export interface BookingPageProps {
-  bookingFlightId: string;
-}

@@ -1,45 +1,71 @@
+import * as Sentry from "@sentry/browser";
+import { useSearchParams } from "react-router";
 import { useEffect, useState } from "react";
 import type { City, Flight } from "../types";
 import { FlightCard } from "./FlightCard";
 
 export function SearchPage() {
   const [cities, setCities] = useState<City[]>([]);
-  const [flights, setFlights] = useState<Flight[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchState, setSearchState] = useState<{
+    key: string;
+    flights: Flight[];
+    error: string | null;
+  } | null>(null);
 
-  // Данные формы поиска (по ТЗ: откуда, куда, дата, пассажиры)
-  const [origin, setOrigin] = useState<string>("");
-  const [destination, setDestination] = useState<string>("");
-  const [date, setDate] = useState<string>(new Date().toISOString().split("T")[0]);
-  const [passengers, setPassengers] = useState<number>(1);
-  const [loading, setLoading] = useState(true);
+  // Показываем результат только если он относится к текущему поиску в URL.
+  // Иначе во время нового запроса мигали бы рейсы предыдущего.
+  const searchKey = searchParams.toString();
+  const isCurrentSearch = searchState?.key === searchKey;
+  const flights = isCurrentSearch && searchState ? searchState.flights : [];
+  const error = isCurrentSearch && searchState ? searchState.error : null;
+  const loading = !isCurrentSearch;
 
-  const fetchFlights = (from: string, to: string, departureDate: string, passCount: number) => {
-    setLoading(true);
-    setError(null);
+  // Значения полей читаются из URL, а не живут в состоянии.
+  const originParam = searchParams.get("origin") ?? "";
+  const destinationParam = searchParams.get("destination") ?? "";
+  const dateParam = searchParams.get("date") ?? new Date().toISOString().split("T")[0];
+  const passengersParam = searchParams.get("passengers") ?? "1";
 
-    const queryParams = new URLSearchParams({
-      origin: from,
-      destination: to,
-      date: departureDate,
-      passengers: passCount.toString(),
+   useEffect(() => {
+    // Разбираем searchKey вместо чтения внешних переменных:
+    // так эффект зависит ровно от одной величины — от адреса.
+    const params = new URLSearchParams(searchKey);
+    const origin = params.get("origin");
+    const destination = params.get("destination");
+    if (!origin || !destination) {
+      return;
+    }
+    // ignore защищает от гонки: если URL сменился, пока летел предыдущий
+    // запрос, его ответ не должен затирать новый.
+    let ignore = false;
+
+    const query = new URLSearchParams({
+      origin,
+      destination,
+      date: params.get("date") ?? new Date().toISOString().split("T")[0],
+      passengers: params.get("passengers") ?? "1",
     });
 
-    fetch(`/api/flights?${queryParams.toString()}`)
+    fetch(`/api/flights?${query.toString()}`)
       .then((res) => {
         if (!res.ok) throw new Error("Ошибка при поиске рейсов");
         return res.json();
       })
       .then((data: Flight[]) => {
-        setFlights(data);
-        setLoading(false);
+        if (ignore) return;
+        setSearchState({ key: searchKey, flights: data, error: null });
       })
       .catch((err) => {
-        setError(err.message);
-        setLoading(false);
+        if (ignore) return;
+        setSearchState({ key: searchKey, flights: [], error: err.message });
       });
-  };
 
+    return () => {
+      ignore = true;
+    };
+  }, [searchKey]);
+  // Справочник городов грузится один раз за всё приложение.
   useEffect(() => {
     fetch("/api/cities")
       .then((res) => {
@@ -48,38 +74,65 @@ export function SearchPage() {
       })
       .then((data: City[]) => {
         setCities(data);
+        if (searchParams.get("origin") && searchParams.get("destination")) {
+          return;
+        }
 
         if (data.length >= 2) {
-          const firstCityId = data[0].code;
-          const secondCityId = data[1].code;
-
-          setOrigin(firstCityId);
-          setDestination(secondCityId);
-
-          //  Сразу автоматически ищем рейсы между ними, не требуя клика от пользователя
-          fetchFlights(firstCityId, secondCityId, date, passengers);
+          const [from, to] = data;
+          // replace: авто-поиск при первом входе не должен засорять историю,
+          // иначе «Назад» на главной уводит на предыдущую главную.
+          setSearchParams(
+            {
+              origin: from.code,
+              destination: to.code,
+              date: new Date().toISOString().split("T")[0],
+              passengers: "1",
+            },
+            { replace: true },
+          );
         } else {
-          setLoading(false);
+          setSearchState({ key: searchParams.toString(), flights: [], error: null });
         }
       })
       .catch((err) => {
         console.error("Ошибка запроса к моку:", err);
-        setError(err.message);
-        setLoading(false);
+        setSearchState({ key: searchParams.toString(), flights: [], error: err.message });
       });
+    // Справочник городов — статичные данные, грузим один раз за всё приложение.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSearch = (e: React.SubmitEvent) => {
+  const handleSearch = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    fetchFlights(origin, destination, date, passengers);
+    // Значения читаем прямо из формы — состояния с полями больше нет.
+    const formData = new FormData(e.currentTarget);
+    setSearchParams({
+      origin: String(formData.get("origin")),
+      destination: String(formData.get("destination")),
+      date: String(formData.get("date")),
+      passengers: String(formData.get("passengers")),
+    });
+  };
+  const triggerSentryTestError = () => {
+    const error = new Error("Sentry test error from flight booking app");
+    Sentry.captureException(error);
+    throw error;
   };
   return (
     <div className="search-page">
-      <form data-testid="flight-search-form" onSubmit={handleSearch} className="search-form">
+      <button type="button" className="button button--sentry-test" data-testid="sentry-test-error" onClick={triggerSentryTestError}>
+        Отправить тестовую ошибку
+      </button>
+<form
+        key={`${searchKey}::${cities.length}`}
+        data-testid="flight-search-form"
+        onSubmit={handleSearch}
+        className="search-form"
+      >
         <div className="search-form__field">
           <label className="search-form__label">Откуда</label>
-          <select data-testid="search-origin" value={origin} onChange={(e) => setOrigin(e.target.value)} className="search-form__input">
+          <select name="origin" data-testid="search-origin" defaultValue={originParam} className="search-form__input">
             {cities.map((city) => (
               <option key={city.code} value={city.code}>
                 {city.name}
@@ -90,7 +143,7 @@ export function SearchPage() {
 
         <div className="search-form__field">
           <label className="search-form__label">Куда</label>
-          <select data-testid="search-destination" value={destination} onChange={(e) => setDestination(e.target.value)} className="search-form__input">
+          <select name="destination" data-testid="search-destination" defaultValue={destinationParam} className="search-form__input">
             {cities.map((city) => (
               <option key={city.code} value={city.code}>
                 {city.name}
@@ -101,12 +154,12 @@ export function SearchPage() {
 
         <div className="search-form__field">
           <label className="search-form__label">Дата</label>
-          <input type="date" data-testid="search-date" value={date} onChange={(e) => setDate(e.target.value)} className="search-form__input" />
+          <input type="date" name="date" data-testid="search-date" defaultValue={dateParam} className="search-form__input" />
         </div>
 
         <div className="search-form__field search-form__field--passengers">
           <label className="search-form__label">Пассажиры</label>
-          <input type="number" min="1" data-testid="search-passengers" value={passengers} onChange={(e) => setPassengers(Number(e.target.value))} className="search-form__input" />
+          <input type="number" name="passengers" min="1" data-testid="search-passengers" defaultValue={passengersParam} className="search-form__input" />
         </div>
 
         <div>
