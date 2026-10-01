@@ -1,48 +1,56 @@
+import * as yup from "yup";
 import type { Passenger, ValidateParams } from "../types";
 
-export function validateBookingForm({ contactEmail, contactPhone, passengersList }: ValidateParams) {
-  let hasErrors = false;
-  
-  // Просто объект, TS сам поймет его структуру
- const errors: {
-    email?: string;
-    phone?: string;
-    passengers?: Record<number, Partial<Record<keyof Passenger, string>>>;
-  } = {};
-    const pErrorsArr: Record<number, Partial<Record<keyof Passenger, string>>> = {};
+type BookingErrors = {
+  email?: string;
+  phone?: string;
+  passengers?: Record<number, Partial<Record<keyof Passenger, string>>>;
+};
 
-  // Валидация контактов
-  if (!contactEmail.trim()) {
-    errors.email = "Email обязателен";
-    hasErrors = true;
-  } else if (!/\S+@\S+\.\S+/.test(contactEmail)) {
-    errors.email = "Некорректный формат email";
-    hasErrors = true;
+const passengerSchema = yup.object({
+  firstName: yup.string().trim().required("Имя обязательно"),
+  lastName: yup.string().trim().required("Фамилия обязательна"),
+  dateOfBirth: yup.string().trim().required("Дата рождения обязательна"),
+  documentNumber: yup.string().trim().required("Документ обязателен"),
+});
+
+const bookingSchema = yup.object({
+  contactEmail: yup
+    .string()
+    .trim()
+    .required("Email обязателен")
+    .email("Некорректный формат email"),
+  contactPhone: yup.string().trim().required("Телефон обязателен"),
+  passengersList: yup.array().of(passengerSchema),
+});
+
+export async function validateBookingForm({ contactEmail, contactPhone, passengersList }: ValidateParams) {
+  const errors: BookingErrors = {};
+
+  try {
+    await bookingSchema.validate(
+      { contactEmail, contactPhone, passengersList },
+      { abortEarly: false },
+    );
+  } catch (err) {
+    if (!(err instanceof yup.ValidationError)) throw err;
+
+    err.inner.forEach((e) => {
+      // Путь к полю пассажира выглядит как passengersList[0].firstName
+      const passengerMatch = e.path?.match(/^passengersList\[(\d+)\]\.(.+)$/);
+
+      if (passengerMatch) {
+        const index = Number(passengerMatch[1]);
+        const field = passengerMatch[2] as keyof Passenger;
+        const previous = errors.passengers?.[index] ?? {};
+        errors.passengers = { ...errors.passengers, [index]: { ...previous, [field]: e.message } };
+        return;
+      }
+
+      if (e.path === "contactEmail") errors.email = e.message;
+      if (e.path === "contactPhone") errors.phone = e.message;
+    });
   }
 
-  if (!contactPhone.trim()) {
-    errors.phone = "Телефон обязателен";
-    hasErrors = true;
-  }
-
-  // Валидация списка пассажиров
-  passengersList.forEach((passenger, index) => {
-     const pError: Partial<Record<keyof Passenger, string>> = {};
-
-    if (!passenger.firstName?.trim()) pError.firstName = "Имя обязательно";
-    if (!passenger.lastName?.trim()) pError.lastName = "Фамилия обязательна";
-    if (!passenger.dateOfBirth?.trim()) pError.dateOfBirth = "Дата рождения обязательна";
-    if (!passenger.documentNumber?.trim()) pError.documentNumber = "Документ обязателен";
-
-    if (Object.keys(pError).length > 0) {
-      pErrorsArr[index] = pError;
-      hasErrors = true;
-    }
-  });
-
-  if (Object.keys(pErrorsArr).length > 0) {
-    errors.passengers = pErrorsArr;
-  }
-
-  return { hasErrors, errors };
+  return { hasErrors: Object.keys(errors).length > 0, errors };
 }

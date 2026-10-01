@@ -70,7 +70,7 @@ export function BookingPage() {
     setValidationErrors({});
     setError(null);
 
-    const { hasErrors, errors } = validateBookingForm({
+   const { hasErrors, errors } = await validateBookingForm({
       contactEmail,
       contactPhone,
       passengersList,
